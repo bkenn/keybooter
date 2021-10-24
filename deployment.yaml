@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: keybooter
+  name: keybooter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keybooter
+  template:
+    metadata:
+      labels:
+        app: keybooter
+    spec:
+      containers:
+      - image: docker.io/bkenn/keybooter:0.0.2-SNAPSHOT
+        imagePullPolicy: Always
+        name: keybooter
+        volumeMounts:
+          - mountPath: /mnt/nfs_share
+            name: nfs
+      volumes:
+        - name: nfs
+          persistentVolumeClaim:
+            claimName: nfs
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keybooter
+  labels:
+    app: keybooter
+spec:
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8080
+  selector:
+    app: keybooter
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keybooter-ingress
+spec:
+  rules:
+    - host: keybooter.nightware.us
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keybooter
+                port:
+                  number: 8082
